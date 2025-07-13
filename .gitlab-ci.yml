@@ -1,0 +1,9 @@
+variables:
+  GITHUB_REMOTE: z0link/terraform-provicer-stepca
+include:
+  - project: "pub/templates"
+    file: "/sync/ci/github.yaml"
+
+stages:
+  - push_to_github
+

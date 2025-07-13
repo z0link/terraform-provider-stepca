@@ -41,3 +41,25 @@ resource "stepca_certificate" "example" {
 ```
 
 The resulting certificate will be available as the `certificate` attribute.
+
+## Test Releases
+
+Every push to `main` publishes a prerelease on GitHub using the latest commit
+hash as the version. The packaged provider binary is uploaded as
+`terraform-provider-stepca_<commit>_linux_amd64.zip`.
+
+To use a test build from this repository specify the commit hash as the provider
+version:
+
+```hcl
+terraform {
+  required_providers {
+    stepca = {
+      source  = "github.com/z0link/terraform-provider-stepca"
+      version = "<commit>"
+    }
+  }
+}
+```
+
+Replace `<commit>` with the hash shown on the GitHub releases page.

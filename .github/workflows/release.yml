@@ -1,11 +1,13 @@
 name: Release
 
 on:
+  push:
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       version:
         description: 'Version to release'
-        required: true
+        required: false
 
 env:
   PUBLISH_TO_TERRAFORM_REGISTRY: false
@@ -18,8 +20,16 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
-      - name: Build provider
-        run: go build -o terraform-provider-stepca
+      - name: Set release version
+        run: |
+          if [ -z "${{ github.event.inputs.version }}" ]; then
+            echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          else
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
+          fi
+      - name: Build and package provider
+        run: |
+          make package VERSION=$VERSION
       - name: Publish to Terraform Registry
         if: env.PUBLISH_TO_TERRAFORM_REGISTRY == 'true'
         env:
@@ -27,5 +37,20 @@ jobs:
         run: |
           terraform providers push \
             --os=linux --arch=amd64 \
-            --version ${{ github.event.inputs.version }} \
+            --version $VERSION \
             terraform-provider-stepca
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ env.VERSION }}
+          name: Test release ${{ env.VERSION }}
+          draft: false
+          prerelease: true
+      - name: Upload provider asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: dist/terraform-provider-stepca_${{ env.VERSION }}_linux_amd64.zip
+          asset_name: terraform-provider-stepca_${{ env.VERSION }}_linux_amd64.zip
+          asset_content_type: application/zip

@@ -1,0 +1,31 @@
+name: Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+
+env:
+  PUBLISH_TO_TERRAFORM_REGISTRY: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Build provider
+        run: go build -o terraform-provider-stepca
+      - name: Publish to Terraform Registry
+        if: env.PUBLISH_TO_TERRAFORM_REGISTRY == 'true'
+        env:
+          TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
+        run: |
+          terraform providers push \
+            --os=linux --arch=amd64 \
+            --version ${{ github.event.inputs.version }} \
+            terraform-provider-stepca

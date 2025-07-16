@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 )
 
@@ -45,4 +46,25 @@ func (c *Client) Sign(ctx context.Context, csr string) ([]byte, error) {
 		return nil, err
 	}
 	return []byte(result.Cert), nil
+}
+
+// Version retrieves the version string from the /version endpoint.
+func (c *Client) Version(ctx context.Context) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/version", c.baseURL), nil)
+	if err != nil {
+		return "", err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return "", fmt.Errorf("unexpected status: %s", resp.Status)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+	return string(bytes.TrimSpace(b)), nil
 }

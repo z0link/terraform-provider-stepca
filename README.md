@@ -52,6 +52,16 @@ resource "stepca_certificate" "example" {
 
 The resulting certificate will be available as the `certificate` attribute.
 
+### Data Sources
+
+Query the CA version:
+
+```hcl
+data "stepca_version" "current" {}
+```
+
+The version string will be available as `data.stepca_version.current.version`.
+
 ## Test Releases
 
 Every push to `main` publishes a prerelease on GitHub using the latest commit

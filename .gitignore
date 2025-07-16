@@ -1,3 +1,33 @@
+
+# Binaries for programs and plugins
 terraform-provider-stepca
+*.exe
+*.dll
+*.so
+*.dylib
 dist/
 dummy_ca
+# Build directories
+/dist/
+/bin/
+
+# Archived build artifacts
+*.tar.gz
+*.zip
+
+# Step CA initialization files
+config/
+certs/
+secrets/
+password.txt
+*.pem
+*.key
+*.crt
+
+# Terraform local data
+.terraform/
+
+# Go build cache
+*.test
+*.out
+

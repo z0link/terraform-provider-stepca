@@ -1,10 +1,12 @@
+
 # Binaries for programs and plugins
 terraform-provider-stepca
 *.exe
 *.dll
 *.so
 *.dylib
-
+dist/
+dummy_ca
 # Build directories
 /dist/
 /bin/
@@ -28,3 +30,4 @@ password.txt
 # Go build cache
 *.test
 *.out
+

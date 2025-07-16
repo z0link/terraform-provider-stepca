@@ -2,7 +2,7 @@ name: Release
 
 on:
   push:
-    branches: [ main ]
+    branches: [ '**' ]
   workflow_dispatch:
     inputs:
       version:
@@ -20,10 +20,23 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Detect provider code changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            provider:
+              - '**/*.go'
+              - go.mod
+              - go.sum
+              - Makefile
+              - scripts/**
       - uses: actions/setup-go@v5
+        if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch'
         with:
           go-version-file: go.mod
       - name: Set release version
+        if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           if [ -z "${{ github.event.inputs.version }}" ]; then
             echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
@@ -31,10 +44,11 @@ jobs:
             echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
           fi
       - name: Build and package provider
+        if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch'
         run: |
           make package VERSION=$VERSION
       - name: Publish to Terraform Registry
-        if: env.PUBLISH_TO_TERRAFORM_REGISTRY == 'true'
+        if: (github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch') && env.PUBLISH_TO_TERRAFORM_REGISTRY == 'true'
         env:
           TF_API_TOKEN: ${{ secrets.TF_API_TOKEN }}
         run: |
@@ -43,6 +57,7 @@ jobs:
             --version $VERSION \
             terraform-provider-stepca
       - name: Create GitHub Release
+        if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch'
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
@@ -51,6 +66,7 @@ jobs:
           draft: false
           prerelease: true
       - name: Upload provider asset
+        if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}

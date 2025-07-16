@@ -1,6 +1,16 @@
 # Terraform Provider StepCA
 
-This is an experimental Terraform provider for interacting with a self-hosted [step-ca](https://github.com/smallstep/certificates) instance. It exposes a simple resource for signing certificates using the `/sign` API endpoint.
+This provider aims to expose [step-ca](https://github.com/smallstep/certificates) CLI operations as declarative Terraform resources. It currently offers a simple resource for signing certificates using the `/sign` API endpoint, but will expand to cover more of step-ca's functionality.
+
+## Project goals
+
+The long-term objective is to manage step-ca configuration statefully through Terraform. Planned capabilities include:
+
+- Creating and managing private keys
+- Managing provisioners
+- Creating, renewing, and revoking certificates and CSRs
+- Generating `defaults.json` and `ca.json` from resource and data references
+- Additional step-ca CLI features where it makes sense to manage them declaratively
 
 ## Requirements
 

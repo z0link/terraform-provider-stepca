@@ -2,19 +2,31 @@ name: CI
 
 on:
   push:
-    branches: [ main ]
   pull_request:
-    branches: [ main ]
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Detect provider code changes
+        id: changes
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            provider:
+              - '**/*.go'
+              - go.mod
+              - go.sum
+              - Makefile
+              - scripts/**
       - uses: actions/setup-go@v5
+        if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true'
         with:
           go-version-file: go.mod
       - name: Build
+        if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true'
         run: go build ./...
       - name: Test
+        if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true'
         run: go test ./...

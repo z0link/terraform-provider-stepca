@@ -9,6 +9,9 @@ on:
         description: 'Version to release'
         required: false
 
+permissions:
+  contents: write
+
 env:
   PUBLISH_TO_TERRAFORM_REGISTRY: false
 

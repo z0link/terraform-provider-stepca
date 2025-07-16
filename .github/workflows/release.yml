@@ -33,6 +33,12 @@ jobs:
       - name: Build and package provider
         run: |
           make package VERSION=$VERSION
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.6
+      - name: Test packaged provider
+        run: |
+          ./scripts/test_release.sh $VERSION
       - name: Publish to Terraform Registry
         if: env.PUBLISH_TO_TERRAFORM_REGISTRY == 'true'
         env:

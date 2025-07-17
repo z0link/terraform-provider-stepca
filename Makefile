@@ -1,10 +1,7 @@
 BINARY := terraform-provider-stepca
-STEP_VERSION := $(shell step version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
-COMMIT_TAG := $(shell git tag --points-at HEAD | head -n 1)
-ifeq ($(strip $(COMMIT_TAG)),)
-COMMIT_TAG := $(shell git rev-parse --short=6 HEAD)
-endif
-VERSION ?= stepca-$(STEP_VERSION)-$(COMMIT_TAG)
+VERSION ?= $(shell git rev-parse --short HEAD)
+SEMVER ?= 0.0.0-$(VERSION)
+
 DIST_DIR := dist
 
 .PHONY: build binary package test release
@@ -12,7 +9,7 @@ DIST_DIR := dist
 build: package
 
 binary:
-	GOOS=linux GOARCH=amd64 go build -o $(BINARY)
+        GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/z0link/terraform-provider-stepca/internal/version.Version=$(SEMVER)" -o $(BINARY)
 
 package: binary
 	mkdir -p $(DIST_DIR)

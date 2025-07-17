@@ -66,32 +66,27 @@ The version string will be available as `data.stepca_version.current.version`.
 
 ## Test Releases
 
-Every push to `main` publishes a prerelease on GitHub using a version string
-that combines the installed `step` CLI version and the commit tag. If the commit
-is not tagged the first six characters of the commit hash are used. The packaged
-provider binary is uploaded as
-`terraform-provider-stepca_stepca-<step-version>-<commit>_linux_amd64.zip`.
 
-Terraform only accepts semantic version numbers. After extracting a prerelease
-binary, rename it to a valid version before running `terraform init`. One option
-is to rename the file to `terraform-provider-stepca_v0.0.0` and reference that
-version in your configuration:
+Every push to `main` publishes a prerelease on GitHub using the latest commit
+hash as the version. The packaged provider binary is uploaded as
+`terraform-provider-stepca_<commit>_linux_amd64.zip`. The provider itself is
+built with a pseudo-semver version in the form `0.0.0-<commit>` so Terraform can
+process version constraints during testing.
 
-```bash
-unzip terraform-provider-stepca_stepca-<step-version>-<commit>_linux_amd64.zip
-mv terraform-provider-stepca terraform-provider-stepca_v0.0.0
-```
+To use a test build from this repository specify the pseudo-semver version as
+the provider version:
+
 
 ```hcl
 terraform {
   required_providers {
     stepca = {
-      source  = "local/stepca"
-      version = "0.0.0"
+      source  = "github.com/z0link/terraform-provider-stepca"
+      version = "0.0.0-<commit>"
     }
   }
 }
 ```
 
-Replace `<step-version>` with the CLI version embedded in the filename and
-`<commit>` with the commit hash shown on the GitHub releases page.
+Replace `<commit>` with the commit hash shown on the GitHub releases page.
+

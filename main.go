@@ -7,5 +7,7 @@ import (
 )
 
 func main() {
-	providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{})
+	providerserver.Serve(context.Background(), provider.New, providerserver.ServeOpts{
+		Address: "local/stepca",
+	})
 }

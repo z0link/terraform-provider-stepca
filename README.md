@@ -84,7 +84,7 @@ mv terraform-provider-stepca terraform-provider-stepca_v0.0.0
 terraform {
   required_providers {
     stepca = {
-      source  = "local/stepca"
+      source  = "local/stepca" # provider binary declares this address
       version = "0.0.0"
     }
   }

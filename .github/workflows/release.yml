@@ -35,11 +35,23 @@ jobs:
         if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch'
         with:
           go-version-file: go.mod
+      - name: Install step dependencies
+        if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch'
+        run: |
+          curl -L https://github.com/smallstep/cli/releases/latest/download/step-cli_amd64.deb -o step-cli.deb
+          sudo dpkg -i step-cli.deb
+          curl -L https://github.com/smallstep/certificates/releases/latest/download/step-ca_amd64.deb -o step-ca.deb
+          sudo dpkg -i step-ca.deb
       - name: Set release version
         if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch'
         run: |
+          COMMIT_TAG=$(git tag --points-at HEAD | head -n 1)
+          if [ -z "$COMMIT_TAG" ]; then
+            COMMIT_TAG=$(git rev-parse --short=6 HEAD)
+          fi
+          STEP_VERSION=$(step version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
           if [ -z "${{ github.event.inputs.version }}" ]; then
-            echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+            echo "VERSION=stepca-${STEP_VERSION}-${COMMIT_TAG}" >> $GITHUB_ENV
           else
             echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_ENV
           fi

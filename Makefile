@@ -9,7 +9,7 @@ DIST_DIR := dist
 build: package
 
 binary:
-        GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/z0link/terraform-provider-stepca/internal/version.Version=$(SEMVER)" -o $(BINARY)
+	GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/z0link/terraform-provider-stepca/internal/version.Version=$(SEMVER)" -o $(BINARY)
 
 package: binary
 	mkdir -p $(DIST_DIR)

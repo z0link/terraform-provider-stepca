@@ -4,9 +4,10 @@ set -euo pipefail
 VERSION="${1:-$(git rev-parse --short HEAD)}"
 BINARY="terraform-provider-stepca"
 DIST_DIR="dist"
+SEMVER="0.0.0-${VERSION}"
 
 echo "Building provider binary..."
-GOOS=linux GOARCH=amd64 go build -o "$BINARY"
+GOOS=linux GOARCH=amd64 go build -ldflags "-X github.com/z0link/terraform-provider-stepca/internal/version.Version=${SEMVER}" -o "$BINARY"
 
 mkdir -p "$DIST_DIR"
 zip "$DIST_DIR/${BINARY}_${VERSION}_linux_amd64.zip" "$BINARY"

@@ -66,17 +66,19 @@ The version string will be available as `data.stepca_version.current.version`.
 
 Every push to `main` publishes a prerelease on GitHub using the latest commit
 hash as the version. The packaged provider binary is uploaded as
-`terraform-provider-stepca_<commit>_linux_amd64.zip`.
+`terraform-provider-stepca_<commit>_linux_amd64.zip`. The provider itself is
+built with a pseudo-semver version in the form `0.0.0-<commit>` so Terraform can
+process version constraints during testing.
 
-To use a test build from this repository specify the commit hash as the provider
-version:
+To use a test build from this repository specify the pseudo-semver version as
+the provider version:
 
 ```hcl
 terraform {
   required_providers {
     stepca = {
       source  = "github.com/z0link/terraform-provider-stepca"
-      version = "<commit>"
+      version = "0.0.0-<commit>"
     }
   }
 }

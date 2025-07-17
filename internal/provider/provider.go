@@ -10,6 +10,7 @@ import (
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/z0link/terraform-provider-stepca/internal/client"
+	"github.com/z0link/terraform-provider-stepca/internal/version"
 )
 
 // Ensure implementation satisfies interfaces
@@ -29,6 +30,7 @@ type stepcaProviderModel struct {
 
 func (p *stepcaProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
 	resp.TypeName = "stepca"
+	resp.Version = version.Version
 }
 
 func (p *stepcaProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {

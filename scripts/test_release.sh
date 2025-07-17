@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:?version required}"
 BINARY="terraform-provider-stepca"
+VERSION="${1:?version required}"
+TEST_VERSION="0.0.0"
 DIST_DIR="dist"
 SEMVER="0.0.0-${VERSION}"
 

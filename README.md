@@ -2,6 +2,8 @@
 
 This provider aims to expose [step-ca](https://github.com/smallstep/certificates) CLI operations as declarative Terraform resources. It currently offers a simple resource for signing certificates using the `/sign` API endpoint, but will expand to cover more of step-ca's functionality.
 
+Provider documentation for registry publishing is located in the `docs` directory.
+
 ## Project goals
 
 The long-term objective is to manage step-ca configuration statefully through Terraform. Planned capabilities include:
@@ -84,4 +86,4 @@ terraform {
 }
 ```
 
-Replace `<commit>` with the hash shown on the GitHub releases page.
+Replace `<commit>` with the commit hash shown on the GitHub releases page.

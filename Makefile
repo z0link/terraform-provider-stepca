@@ -1,6 +1,7 @@
 BINARY := terraform-provider-stepca
 VERSION ?= $(shell git rev-parse --short HEAD)
 SEMVER ?= 0.0.0-$(VERSION)
+
 DIST_DIR := dist
 
 .PHONY: build binary package test release

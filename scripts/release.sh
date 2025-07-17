@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:-$(git rev-parse --short HEAD)}"
 BINARY="terraform-provider-stepca"
+STEP_VERSION="$(step version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)"
+COMMIT_TAG="$(git tag --points-at HEAD | head -n 1)"
+if [[ -z "$COMMIT_TAG" ]]; then
+  COMMIT_TAG="$(git rev-parse --short=6 HEAD)"
+fi
+VERSION="${1:-stepca-${STEP_VERSION}-${COMMIT_TAG}}"
 DIST_DIR="dist"
 SEMVER="0.0.0-${VERSION}"
 

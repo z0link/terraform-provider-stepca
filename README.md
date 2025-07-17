@@ -64,6 +64,14 @@ data "stepca_version" "current" {}
 
 The version string will be available as `data.stepca_version.current.version`.
 
+Fetch the root certificate:
+
+```hcl
+data "stepca_ca_certificate" "root" {}
+```
+
+The certificate is accessible via `data.stepca_ca_certificate.root.certificate`.
+
 ## Test Releases
 
 Every push to `main` publishes a prerelease on GitHub using a version string

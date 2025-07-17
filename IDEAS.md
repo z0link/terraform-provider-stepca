@@ -9,7 +9,7 @@ Diese Datei sammelt moegliche Terraform **Data Sources** und **Resources** fuer 
 ## Potenzielle Data Sources
 
 - **stepca_version** – Liefert die Version des CA-Servers (bereits implementiert).
-- **stepca_ca_certificate** – Gibt das Root- bzw. Intermediate-Zertifikat zurueck.
+- **stepca_ca_certificate** – Gibt das Root- bzw. Intermediate-Zertifikat zurueck. (implementiert)
 - **stepca_defaults** – Liest Einstellungen aus einer `defaults.json`.
 - **stepca_template** – Gibt eine bestehende Zertifikatsvorlage zurueck.
 - **stepca_provisioners** – Liefert eine Liste der konfigurierten Provisioner.

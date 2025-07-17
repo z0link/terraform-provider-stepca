@@ -34,3 +34,4 @@ The following arguments are supported:
 ## Data Sources
 
 * [`stepca_version`](data-sources/version.md) - Retrieve the CA version.
+* [`stepca_ca_certificate`](data-sources/ca_certificate.md) - Fetch the root certificate.

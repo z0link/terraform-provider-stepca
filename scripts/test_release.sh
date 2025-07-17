@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-VERSION="${1:?version required}"
 BINARY="terraform-provider-stepca"
+VERSION="${1:?version required}"
+TEST_VERSION="0.0.0"
 DIST_DIR="dist"
 
 # Build and start dummy CA
@@ -22,7 +23,7 @@ sleep 1
 
 PLUGIN_DIR=$(mktemp -d)
 unzip "$DIST_DIR/${BINARY}_${VERSION}_linux_amd64.zip" -d "$PLUGIN_DIR"
-mv "$PLUGIN_DIR/$BINARY" "$PLUGIN_DIR/${BINARY}_v${VERSION}"
+mv "$PLUGIN_DIR/$BINARY" "$PLUGIN_DIR/${BINARY}_v${TEST_VERSION}"
 
 TMP_DIR=$(mktemp -d)
 cat <<TF > "$TMP_DIR/main.tf"
@@ -30,7 +31,7 @@ terraform {
   required_providers {
     stepca = {
       source  = "local/stepca"
-      version = "${VERSION}"
+      version = "${TEST_VERSION}"
     }
   }
 }

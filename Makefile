@@ -1,5 +1,10 @@
 BINARY := terraform-provider-stepca
-VERSION ?= $(shell git rev-parse --short HEAD)
+STEP_VERSION := $(shell step version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n 1)
+COMMIT_TAG := $(shell git tag --points-at HEAD | head -n 1)
+ifeq ($(strip $(COMMIT_TAG)),)
+COMMIT_TAG := $(shell git rev-parse --short=6 HEAD)
+endif
+VERSION ?= stepca-$(STEP_VERSION)-$(COMMIT_TAG)
 DIST_DIR := dist
 
 .PHONY: build binary package test release

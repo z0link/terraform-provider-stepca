@@ -68,3 +68,24 @@ func (c *Client) Version(ctx context.Context) (string, error) {
 	}
 	return string(bytes.TrimSpace(b)), nil
 }
+
+// RootCertificate retrieves the root certificate PEM from the /root endpoint.
+func (c *Client) RootCertificate(ctx context.Context) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/root", c.baseURL), nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("unexpected status: %s", resp.Status)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}

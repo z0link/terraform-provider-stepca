@@ -86,3 +86,38 @@ func TestClientVersion(t *testing.T) {
 		t.Fatal("expected error from Version")
 	}
 }
+
+func TestClientRootCertificate(t *testing.T) {
+	rootServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/root" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte("ROOTPEM"))
+	}))
+	defer rootServer.Close()
+
+	c := New(rootServer.URL, "token")
+	c.httpClient = rootServer.Client()
+	cert, err := c.RootCertificate(context.Background())
+	if err != nil {
+		t.Fatalf("RootCertificate returned error: %v", err)
+	}
+	if string(cert) != "ROOTPEM" {
+		t.Fatalf("unexpected cert: %s", cert)
+	}
+
+	errServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer errServer.Close()
+
+	c = New(errServer.URL, "token")
+	c.httpClient = errServer.Client()
+	if _, err := c.RootCertificate(context.Background()); err == nil {
+		t.Fatal("expected error from RootCertificate")
+	}
+}

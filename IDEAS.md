@@ -19,7 +19,8 @@ Diese Datei sammelt moegliche Terraform **Data Sources** und **Resources** fuer 
 ## Potenzielle Resources
 
 - **stepca_certificate** – Signiert ein CSR und liefert das Zertifikat (bereits vorhanden; Create-only).
-- **stepca_provisioner** – Legt Provisioner an (JWK, OIDC, ACME, X5C, SSHPOP, Cloud usw.), aendert und entfernt sie.
+- **stepca_provisioner** – Legt Provisioner an (JWK, OIDC, ACME, X5C, SSHPOP, Cloud usw.), aendert und entfernt sie. Nach `step ca init` existiert genau ein JWK-Admin-Provisioner. Weitere Admins koennen optional konfiguriert werden.
+- **stepca_admin** – Verwalten einzelner Admin-User und Zuordnung zu Provisionern.
 - **stepca_template** – Erstellt bzw. aktualisiert Zertifikats-Templates aus den Vorlagen der Step-CA Dokumentation.
 - **stepca_policy** – Definiert Issuance Policies, wie in `policies.mdx` beschrieben.
 - **stepca_webhook** – Verwaltung der Webhook-Konfiguration fuer Ereignisse (siehe `webhooks.mdx`).

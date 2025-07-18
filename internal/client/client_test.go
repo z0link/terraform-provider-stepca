@@ -121,3 +121,102 @@ func TestClientRootCertificate(t *testing.T) {
 		t.Fatal("expected error from RootCertificate")
 	}
 }
+
+func TestClientProvisioner(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/admin/provisioners", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		var p Provisioner
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			t.Fatalf("decode error: %v", err)
+		}
+		if p.Name != "test" || p.Type != "JWK" || !p.Admin {
+			t.Fatalf("unexpected provisioner: %#v", p)
+		}
+		w.WriteHeader(http.StatusCreated)
+	})
+	mux.HandleFunc("/admin/provisioners/test", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			_ = json.NewEncoder(w).Encode(Provisioner{Name: "test", Type: "JWK", Admin: true})
+		case http.MethodDelete:
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := New(srv.URL, "tkn").WithAdminToken("adm")
+	c.httpClient = srv.Client()
+
+	if err := c.CreateProvisioner(context.Background(), Provisioner{Name: "test", Type: "JWK", Admin: true}); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	p, err := c.GetProvisioner(context.Background(), "test")
+	if err != nil {
+		t.Fatalf("get failed: %v", err)
+	}
+	if p == nil || p.Name != "test" || p.Type != "JWK" || !p.Admin {
+		t.Fatalf("unexpected provisioner %#v", p)
+	}
+
+	if err := c.DeleteProvisioner(context.Background(), "test"); err != nil {
+		t.Fatalf("delete failed: %v", err)
+	}
+}
+
+func TestClientAdmin(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/admin/admins", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		var a Admin
+		if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+			t.Fatalf("decode error: %v", err)
+		}
+		if a.Name != "alice" || a.Provisioner != "admin" {
+			t.Fatalf("unexpected admin: %#v", a)
+		}
+		w.WriteHeader(http.StatusCreated)
+	})
+	mux.HandleFunc("/admin/admins/alice", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("provisioner") != "admin" {
+			t.Fatalf("missing provisioner")
+		}
+		switch r.Method {
+		case http.MethodGet:
+			_ = json.NewEncoder(w).Encode(Admin{Name: "alice", Provisioner: "admin"})
+		case http.MethodDelete:
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := New(srv.URL, "tkn").WithAdminToken("adm")
+	c.httpClient = srv.Client()
+
+	if err := c.CreateAdmin(context.Background(), Admin{Name: "alice", Provisioner: "admin"}); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	a, err := c.GetAdmin(context.Background(), "alice", "admin")
+	if err != nil {
+		t.Fatalf("get failed: %v", err)
+	}
+	if a == nil || a.Name != "alice" || a.Provisioner != "admin" {
+		t.Fatalf("unexpected admin %#v", a)
+	}
+
+	if err := c.DeleteAdmin(context.Background(), "alice", "admin"); err != nil {
+		t.Fatalf("delete failed: %v", err)
+	}
+}

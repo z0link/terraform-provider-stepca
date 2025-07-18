@@ -4,7 +4,7 @@ SEMVER ?= 0.0.0-$(VERSION)
 
 DIST_DIR := dist
 
-.PHONY: build binary package test release
+.PHONY: build binary package test release install-local
 
 build: package
 
@@ -20,3 +20,9 @@ test:
 
 release:
 	scripts/release.sh $(VERSION)
+
+install-local: package
+	PLUGIN_DIR=$(HOME)/.terraform.d/plugins/registry.terraform.io/local/stepca/$(SEMVER)/linux_amd64; \
+	mkdir -p $$PLUGIN_DIR; \
+	unzip -o $(DIST_DIR)/$(BINARY)_$(VERSION)_linux_amd64.zip -d $$PLUGIN_DIR; \
+	mv $$PLUGIN_DIR/$(BINARY) $$PLUGIN_DIR/$(BINARY)_v$(SEMVER)

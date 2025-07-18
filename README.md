@@ -89,7 +89,7 @@ the provider version:
 terraform {
   required_providers {
     stepca = {
-      source  = "github.com/z0link/terraform-provider-stepca"
+      source  = "registry.terraform.io/local/stepca"
       version = "0.0.0-<commit>"
     }
   }
@@ -97,4 +97,31 @@ terraform {
 ```
 
 Replace `<commit>` with the commit hash shown on the GitHub releases page.
+
+## Using a Local Build
+
+You can test the provider without publishing it to the Terraform Registry.
+Build the provider and place it under Terraform's plugin directory so that
+`terraform init` can discover it.
+
+```
+# Build the binary with an explicit version
+SEMVER=0.1.0 make package
+
+# Install it into Terraform's plugin directory
+make install-local SEMVER=0.1.0
+```
+
+Terraform configurations then reference the local provider source:
+
+```hcl
+terraform {
+  required_providers {
+    stepca = {
+      source  = "registry.terraform.io/local/stepca"
+      version = "0.1.0"
+    }
+  }
+}
+```
 

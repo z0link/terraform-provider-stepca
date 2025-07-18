@@ -14,6 +14,7 @@ permissions:
 
 env:
   PUBLISH_TO_TERRAFORM_REGISTRY: false
+  GITHUB_TOKEN: ${{ secrets.STEP_RELEASE_TOKEN }}
 
 jobs:
   release:
@@ -83,9 +84,12 @@ jobs:
           name: Test release ${{ env.VERSION }}
           draft: false
           prerelease: true
+          token: ${{ secrets.STEP_RELEASE_TOKEN }}
       - name: Upload provider asset
         if: github.ref == 'refs/heads/main' || steps.changes.outputs.provider == 'true' || github.event_name == 'workflow_dispatch'
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.STEP_RELEASE_TOKEN }}
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: dist/terraform-provider-stepca_${{ env.VERSION }}_linux_amd64.zip

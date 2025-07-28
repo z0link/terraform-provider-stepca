@@ -45,11 +45,11 @@ func (p *stepcaProvider) Schema(ctx context.Context, req provider.SchemaRequest,
 			"admin_key":         schema.StringAttribute{Required: true},
 			"admin_provisioner": schema.StringAttribute{Optional: true},
 			"token":             schema.StringAttribute{Required: true, Sensitive: true},
-                       // Token for admin API calls. Generate with the admin key if
-                       // using a JWK admin provisioner.
-                       "admin_token":       schema.StringAttribute{Optional: true, Sensitive: true},
-               },
-       }
+			// Token for admin API calls. Generate with the admin key if
+			// using a JWK admin provisioner.
+			"admin_token": schema.StringAttribute{Optional: true, Sensitive: true},
+		},
+	}
 }
 
 func (p *stepcaProvider) Configure(ctx context.Context, req provider.ConfigureRequest, resp *provider.ConfigureResponse) {

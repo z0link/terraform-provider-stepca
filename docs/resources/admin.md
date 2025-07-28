@@ -6,8 +6,8 @@ Manages an admin user via the step-ca admin API.
 
 ```hcl
 resource "stepca_admin" "alice" {
-  name        = "alice"
-  provisioner = "admin"
+  name             = "alice"
+  provisioner_name = "admin"
 }
 ```
 
@@ -21,7 +21,7 @@ Admins belong to a specific admin provisioner. Combine this resource with
 ## Argument Reference
 
 * `name` - (Required) The admin's name/email.
-* `provisioner` - (Required) Name of the admin provisioner this admin belongs to.
+* `provisioner_name` - (Required) Name of the admin provisioner this admin belongs to.
 
 ## Attributes Reference
 

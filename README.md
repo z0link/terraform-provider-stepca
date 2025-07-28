@@ -70,7 +70,7 @@ resource "stepca_provisioner" "admin" {
 # Manage an admin
 resource "stepca_admin" "alice" {
   name        = "alice"
-  provisioner = stepca_provisioner.admin.name
+  provisioner_name = stepca_provisioner.admin.name
 }
 ```
 

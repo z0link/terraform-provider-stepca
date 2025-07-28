@@ -26,6 +26,7 @@ password.txt
 
 # Terraform local data
 .terraform/
+.terraform.lock.hcl
 
 # Go build cache
 *.test

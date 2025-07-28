@@ -17,8 +17,8 @@ func NewAdminResource() resource.Resource { return &adminResource{} }
 type adminResource struct{ client *client.Client }
 
 type adminResourceModel struct {
-	Name        types.String `tfsdk:"name"`
-	Provisioner types.String `tfsdk:"provisioner"`
+	Name            types.String `tfsdk:"name"`
+	ProvisionerName types.String `tfsdk:"provisioner_name"`
 }
 
 func (r *adminResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -54,7 +54,7 @@ func (r *adminResource) Create(ctx context.Context, req resource.CreateRequest, 
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	a := client.Admin{Name: data.Name.ValueString(), Provisioner: data.Provisioner.ValueString()}
+	a := client.Admin{Name: data.Name.ValueString(), Provisioner: data.ProvisionerName.ValueString()}
 	if err := r.client.CreateAdmin(ctx, a); err != nil {
 		resp.Diagnostics.AddError("create failed", err.Error())
 		return
@@ -74,7 +74,7 @@ func (r *adminResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	a, err := r.client.GetAdmin(ctx, data.Name.ValueString(), data.Provisioner.ValueString())
+	a, err := r.client.GetAdmin(ctx, data.Name.ValueString(), data.ProvisionerName.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("read failed", err.Error())
 		return
@@ -98,7 +98,7 @@ func (r *adminResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	a := client.Admin{Name: data.Name.ValueString(), Provisioner: data.Provisioner.ValueString()}
+	a := client.Admin{Name: data.Name.ValueString(), Provisioner: data.ProvisionerName.ValueString()}
 	if err := r.client.CreateAdmin(ctx, a); err != nil {
 		resp.Diagnostics.AddError("update failed", err.Error())
 		return
@@ -118,7 +118,7 @@ func (r *adminResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	if err := r.client.DeleteAdmin(ctx, data.Name.ValueString(), data.Provisioner.ValueString()); err != nil {
+	if err := r.client.DeleteAdmin(ctx, data.Name.ValueString(), data.ProvisionerName.ValueString()); err != nil {
 		resp.Diagnostics.AddError("delete failed", err.Error())
 		return
 	}

@@ -18,6 +18,8 @@ The long-term objective is to manage step-ca configuration statefully through Te
 
 * [Go](https://go.dev/) 1.24 or newer must be installed and in your `PATH`.
 * The `terraform` CLI is only required when publishing to the Terraform registry.
+* Install the `step-kms-plugin` so YubiKey-backed keys can be used for the
+  provider's `admin_key`.
 
 ## Building
 
@@ -45,12 +47,42 @@ PUBLISH_TO_TERRAFORM_REGISTRY=true make release VERSION=v0.1.0
 provider "stepca" {
   ca_url = "https://ca.example.com"
   token  = "<one-time-token>"
+  admin_name = "admin@example.com"
+  admin_key  = "/path/to/admin.key"
+  admin_provisioner = "admin"
+  # Supply a token generated for the admin API. When using a JWK admin
+  # provisioner you can create this token with your `admin_key` using
+  # `step ca admin` or `step ca token --issuer <admin_provisioner>`.
+  admin_token = "<admin-token>"
 }
 
 resource "stepca_certificate" "example" {
   csr = file("example.csr")
 }
+
+# Manage a provisioner
+resource "stepca_provisioner" "admin" {
+  name  = "admin"
+  type  = "JWK"
+  admin = true
+}
+
+# Manage an admin
+resource "stepca_admin" "alice" {
+  name        = "alice"
+  provisioner_name = stepca_provisioner.admin.name
+}
 ```
+
+### Step CA Initialization
+
+After running `step ca init` a single JWK provisioner with admin privileges is
+created. Additional provisioners can be managed via the `stepca_provisioner`
+resource. Use the provider's optional `admin_token` argument with a token issued
+for an existing admin provisioner when creating new ones. Tokens can be
+generated using `step ca admin` or `step ca token --issuer <provisioner>` with
+the corresponding admin key. Set `admin = true` to create another admin
+provisioner if desired.
 
 The resulting certificate will be available as the `certificate` attribute.
 

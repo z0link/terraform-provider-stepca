@@ -24,8 +24,12 @@ func New() provider.Provider {
 type stepcaProvider struct{}
 
 type stepcaProviderModel struct {
-	CAURL types.String `tfsdk:"ca_url"`
-	Token types.String `tfsdk:"token"`
+	CAURL            types.String `tfsdk:"ca_url"`
+	AdminName        types.String `tfsdk:"admin_name"`
+	AdminKey         types.String `tfsdk:"admin_key"`
+	AdminProvisioner types.String `tfsdk:"admin_provisioner"`
+	Token            types.String `tfsdk:"token"`
+	AdminToken       types.String `tfsdk:"admin_token"`
 }
 
 func (p *stepcaProvider) Metadata(ctx context.Context, req provider.MetadataRequest, resp *provider.MetadataResponse) {
@@ -36,8 +40,14 @@ func (p *stepcaProvider) Metadata(ctx context.Context, req provider.MetadataRequ
 func (p *stepcaProvider) Schema(ctx context.Context, req provider.SchemaRequest, resp *provider.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"ca_url": schema.StringAttribute{Required: true},
-			"token":  schema.StringAttribute{Required: true, Sensitive: true},
+			"ca_url":            schema.StringAttribute{Required: true},
+			"admin_name":        schema.StringAttribute{Required: true},
+			"admin_key":         schema.StringAttribute{Required: true},
+			"admin_provisioner": schema.StringAttribute{Optional: true},
+			"token":             schema.StringAttribute{Required: true, Sensitive: true},
+			// Token for admin API calls. Generate with the admin key if
+			// using a JWK admin provisioner.
+			"admin_token": schema.StringAttribute{Optional: true, Sensitive: true},
 		},
 	}
 }
@@ -51,6 +61,14 @@ func (p *stepcaProvider) Configure(ctx context.Context, req provider.ConfigureRe
 	}
 
 	c := client.New(data.CAURL.ValueString(), data.Token.ValueString())
+	c = c.WithAdminName(data.AdminName.ValueString())
+	c = c.WithAdminKey(data.AdminKey.ValueString())
+	if !data.AdminProvisioner.IsNull() {
+		c = c.WithAdminProvisioner(data.AdminProvisioner.ValueString())
+	}
+	if !data.AdminToken.IsNull() {
+		c = c.WithAdminToken(data.AdminToken.ValueString())
+	}
 	resp.DataSourceData = c
 	resp.ResourceData = c
 }
@@ -58,6 +76,8 @@ func (p *stepcaProvider) Configure(ctx context.Context, req provider.ConfigureRe
 func (p *stepcaProvider) Resources(ctx context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewCertificateResource,
+		NewProvisionerResource,
+		NewAdminResource,
 	}
 }
 

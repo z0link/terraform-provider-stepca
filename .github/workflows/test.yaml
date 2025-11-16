@@ -1,0 +1,77 @@
+name: Test
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      GO_VERSION: 1.24.3
+      STEPPATH: ${{ runner.temp }}/step-ca
+      STEP_PASSWORD: changeit
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Cache Go modules
+        uses: actions/cache@v4
+        with:
+          path: ~/go/pkg/mod
+          key: ${{ runner.os }}-gomod-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-gomod-${{ env.GO_VERSION }}-
+            ${{ runner.os }}-gomod-
+
+      - name: Cache Go build artifacts
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/go-build
+          key: ${{ runner.os }}-gobuild-${{ env.GO_VERSION }}-${{ hashFiles('**/go.sum') }}
+          restore-keys: |
+            ${{ runner.os }}-gobuild-${{ env.GO_VERSION }}-
+            ${{ runner.os }}-gobuild-
+
+      - name: Install terraform, step-cli, and step-ca
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y curl ca-certificates terraform
+          curl -L https://dl.smallstep.com/gh-release/cli/docs-cli-install/latest/step-cli_amd64.deb -o /tmp/step-cli.deb
+          sudo apt-get install -y /tmp/step-cli.deb
+          curl -L https://dl.smallstep.com/gh-release/certificates/docs-ca-install/latest/step-ca_amd64.deb -o /tmp/step-ca.deb
+          sudo apt-get install -y /tmp/step-ca.deb
+
+      - name: Run tests
+        env:
+          STEPPATH: ${{ env.STEPPATH }}
+          STEP_PASSWORD: ${{ env.STEP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          mkdir -p "$STEPPATH"
+          PASSWORD_FILE="$STEPPATH/password.txt"
+          echo "$STEP_PASSWORD" > "$PASSWORD_FILE"
+          step ca init \
+            --name local-ca \
+            --dns localhost \
+            --address :9000 \
+            --provisioner admin@example.com \
+            --password-file "$PASSWORD_FILE" \
+            --provisioner-password-file "$PASSWORD_FILE" \
+            --with-ca-url "https://localhost:9000" \
+            --force
+          step-ca "$STEPPATH/config/ca.json" >/tmp/step-ca.log 2>&1 &
+          STEP_CA_PID=$!
+          trap 'kill $STEP_CA_PID' EXIT
+          sleep 5
+          go test ./...

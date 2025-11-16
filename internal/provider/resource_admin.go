@@ -28,8 +28,8 @@ func (r *adminResource) Metadata(ctx context.Context, req resource.MetadataReque
 func (r *adminResource) Schema(ctx context.Context, req resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
-			"name":        schema.StringAttribute{Required: true},
-			"provisioner": schema.StringAttribute{Required: true},
+			"name":             schema.StringAttribute{Required: true},
+			"provisioner_name": schema.StringAttribute{Required: true},
 		},
 	}
 }
@@ -83,7 +83,9 @@ func (r *adminResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.State.RemoveResource(ctx)
 		return
 	}
-	data.Provisioner = types.StringValue(a.Provisioner)
+
+	data.Name = types.StringValue(a.Name)
+	data.ProvisionerName = types.StringValue(a.Provisioner)
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }

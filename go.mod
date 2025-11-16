@@ -2,7 +2,10 @@ module github.com/z0link/terraform-provider-stepca
 
 go 1.24.3
 
-require github.com/hashicorp/terraform-plugin-framework v1.15.0
+require (
+	github.com/google/go-cmp v0.7.0
+	github.com/hashicorp/terraform-plugin-framework v1.15.0
+)
 
 require (
 	github.com/fatih/color v1.16.0 // indirect

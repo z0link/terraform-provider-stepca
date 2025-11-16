@@ -72,6 +72,30 @@ func (c *Client) Sign(ctx context.Context, csr string) ([]byte, error) {
 	return []byte(result.Cert), nil
 }
 
+// Certificate retrieves a certificate by serial number via /certificates/{serial}.
+func (c *Client) Certificate(ctx context.Context, serial string) ([]byte, bool, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/certificates/%s", c.baseURL, serial), nil)
+	if err != nil {
+		return nil, false, err
+	}
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, false, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusNotFound {
+		return nil, false, nil
+	}
+	if resp.StatusCode >= 300 {
+		return nil, false, fmt.Errorf("unexpected status: %s", resp.Status)
+	}
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, false, err
+	}
+	return b, true, nil
+}
+
 // Version retrieves the version string from the /version endpoint.
 func (c *Client) Version(ctx context.Context) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/version", c.baseURL), nil)

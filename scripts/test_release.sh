@@ -68,7 +68,6 @@ cert=$(cd "$TMP_DIR" && terraform output -raw cert)
 
 declare -A tests=(
   ["version"]="1.2.3"
-  ["cert"]="dummy-certificate"
 )
 
 for key in "${!tests[@]}"; do
@@ -79,6 +78,11 @@ for key in "${!tests[@]}"; do
     exit 1
   fi
 done
+
+if [[ "$cert" != *"BEGIN CERTIFICATE"* ]]; then
+  echo "certificate output did not contain a PEM block"
+  exit 1
+fi
 
 echo "Integration tests passed."
 

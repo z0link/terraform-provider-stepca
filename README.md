@@ -1,5 +1,7 @@
 # Terraform Provider StepCA
 
+[![Test](https://github.com/z0link/terraform-provider-stepca/actions/workflows/test.yaml/badge.svg)](https://github.com/z0link/terraform-provider-stepca/actions/workflows/test.yaml)
+
 This provider aims to expose [step-ca](https://github.com/smallstep/certificates) CLI operations as declarative Terraform resources. It currently offers a simple resource for signing certificates using the `/sign` API endpoint, but will expand to cover more of step-ca's functionality.
 
 Provider documentation for registry publishing is located in the `docs` directory.
@@ -32,6 +34,10 @@ make build
 ```
 make test
 ```
+
+Automated CI runs the [Test](https://github.com/z0link/terraform-provider-stepca/actions/workflows/test.yaml)
+workflow on every push and pull request to ensure `go test ./...` succeeds
+against a freshly bootstrapped local `step-ca` instance.
 
 ## Releasing
 

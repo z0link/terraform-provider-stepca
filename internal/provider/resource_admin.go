@@ -17,8 +17,8 @@ func NewAdminResource() resource.Resource { return &adminResource{} }
 type adminResource struct{ client *client.Client }
 
 type adminResourceModel struct {
-	Name            types.String `tfsdk:"name"`
-	ProvisionerName types.String `tfsdk:"provisioner_name"`
+	Name        types.String `tfsdk:"name"`
+	Provisioner types.String `tfsdk:"provisioner"`
 }
 
 func (r *adminResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -54,7 +54,7 @@ func (r *adminResource) Create(ctx context.Context, req resource.CreateRequest, 
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	a := client.Admin{Name: data.Name.ValueString(), Provisioner: data.ProvisionerName.ValueString()}
+	a := client.Admin{Name: data.Name.ValueString(), Provisioner: data.Provisioner.ValueString()}
 	if err := r.client.CreateAdmin(ctx, a); err != nil {
 		resp.Diagnostics.AddError("create failed", err.Error())
 		return
@@ -74,7 +74,7 @@ func (r *adminResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	a, err := r.client.GetAdmin(ctx, data.Name.ValueString(), data.ProvisionerName.ValueString())
+	a, err := r.client.GetAdmin(ctx, data.Name.ValueString(), data.Provisioner.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError("read failed", err.Error())
 		return
@@ -83,13 +83,17 @@ func (r *adminResource) Read(ctx context.Context, req resource.ReadRequest, resp
 		resp.State.RemoveResource(ctx)
 		return
 	}
+	data.Provisioner = types.StringValue(a.Provisioner)
 	diags = resp.State.Set(ctx, &data)
 	resp.Diagnostics.Append(diags...)
 }
 
 func (r *adminResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data adminResourceModel
-	diags := req.Plan.Get(ctx, &data)
+	var plan adminResourceModel
+	var state adminResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -98,12 +102,28 @@ func (r *adminResource) Update(ctx context.Context, req resource.UpdateRequest, 
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	a := client.Admin{Name: data.Name.ValueString(), Provisioner: data.ProvisionerName.ValueString()}
-	if err := r.client.CreateAdmin(ctx, a); err != nil {
+	plannedAdmin := client.Admin{Name: plan.Name.ValueString(), Provisioner: plan.Provisioner.ValueString()}
+	if plannedAdmin.Name == state.Name.ValueString() && plannedAdmin.Provisioner == state.Provisioner.ValueString() {
+		diags = resp.State.Set(ctx, &plan)
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	if err := r.client.UpdateAdmin(ctx, state.Name.ValueString(), state.Provisioner.ValueString(), plannedAdmin); err != nil {
 		resp.Diagnostics.AddError("update failed", err.Error())
 		return
 	}
-	diags = resp.State.Set(ctx, &data)
+	updated, err := r.client.GetAdmin(ctx, plannedAdmin.Name, plannedAdmin.Provisioner)
+	if err != nil {
+		resp.Diagnostics.AddError("refresh failed", err.Error())
+		return
+	}
+	if updated == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	plan.Name = types.StringValue(updated.Name)
+	plan.Provisioner = types.StringValue(updated.Provisioner)
+	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 }
 
@@ -118,7 +138,7 @@ func (r *adminResource) Delete(ctx context.Context, req resource.DeleteRequest, 
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	if err := r.client.DeleteAdmin(ctx, data.Name.ValueString(), data.ProvisionerName.ValueString()); err != nil {
+	if err := r.client.DeleteAdmin(ctx, data.Name.ValueString(), data.Provisioner.ValueString()); err != nil {
 		resp.Diagnostics.AddError("delete failed", err.Error())
 		return
 	}

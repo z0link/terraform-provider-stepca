@@ -60,7 +60,7 @@ func (r *provisionerResource) Create(ctx context.Context, req resource.CreateReq
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	p := client.Provisioner{Name: data.Name.ValueString(), Type: data.Type.ValueString(), Admin: !data.Admin.IsNull() && data.Admin.ValueBool()}
+	p := client.Provisioner{Name: data.Name.ValueString(), Type: data.Type.ValueString(), Admin: boolValue(data.Admin)}
 	if err := r.client.CreateProvisioner(ctx, p); err != nil {
 		resp.Diagnostics.AddError("create failed", err.Error())
 		return
@@ -96,8 +96,11 @@ func (r *provisionerResource) Read(ctx context.Context, req resource.ReadRequest
 }
 
 func (r *provisionerResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	var data provisionerResourceModel
-	diags := req.Plan.Get(ctx, &data)
+	var plan provisionerResourceModel
+	var state provisionerResourceModel
+	diags := req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	diags = req.State.Get(ctx, &state)
 	resp.Diagnostics.Append(diags...)
 	if resp.Diagnostics.HasError() {
 		return
@@ -106,12 +109,29 @@ func (r *provisionerResource) Update(ctx context.Context, req resource.UpdateReq
 		resp.Diagnostics.AddError("provider not configured", "missing client")
 		return
 	}
-	p := client.Provisioner{Name: data.Name.ValueString(), Type: data.Type.ValueString(), Admin: !data.Admin.IsNull() && data.Admin.ValueBool()}
-	if err := r.client.CreateProvisioner(ctx, p); err != nil {
+	plannedProv := client.Provisioner{Name: plan.Name.ValueString(), Type: plan.Type.ValueString(), Admin: boolValue(plan.Admin)}
+	if plannedProv.Name == state.Name.ValueString() && plannedProv.Type == state.Type.ValueString() && plannedProv.Admin == boolValue(state.Admin) {
+		diags = resp.State.Set(ctx, &plan)
+		resp.Diagnostics.Append(diags...)
+		return
+	}
+	if err := r.client.UpdateProvisioner(ctx, state.Name.ValueString(), plannedProv); err != nil {
 		resp.Diagnostics.AddError("update failed", err.Error())
 		return
 	}
-	diags = resp.State.Set(ctx, &data)
+	updated, err := r.client.GetProvisioner(ctx, plannedProv.Name)
+	if err != nil {
+		resp.Diagnostics.AddError("refresh failed", err.Error())
+		return
+	}
+	if updated == nil {
+		resp.State.RemoveResource(ctx)
+		return
+	}
+	plan.Name = types.StringValue(updated.Name)
+	plan.Type = types.StringValue(updated.Type)
+	plan.Admin = types.BoolValue(updated.Admin)
+	diags = resp.State.Set(ctx, &plan)
 	resp.Diagnostics.Append(diags...)
 }
 
@@ -130,4 +150,11 @@ func (r *provisionerResource) Delete(ctx context.Context, req resource.DeleteReq
 		resp.Diagnostics.AddError("delete failed", err.Error())
 		return
 	}
+}
+
+func boolValue(v types.Bool) bool {
+	if v.IsNull() || v.IsUnknown() {
+		return false
+	}
+	return v.ValueBool()
 }

@@ -29,8 +29,63 @@ make build
 
 ## Testing
 
+`make test` runs all Go unit tests. Terraform acceptance tests for the
+certificate, provisioner, and admin resources are implemented with the Terraform
+Plugin Framework and run automatically when `TF_ACC=1` is set.
+
+### Running the acceptance tests locally
+
+Follow the local CA instructions from `AGENTS.md` to install Terraform, step-cli,
+and step-ca:
+
 ```
-make test
+apt-get update
+apt-get install -y terraform
+curl -L https://dl.smallstep.com/gh-release/cli/docs-cli-install/latest/step-cli_amd64.deb -o step-cli.deb
+apt-get install -y ./step-cli.deb
+curl -L https://dl.smallstep.com/gh-release/certificates/docs-ca-install/latest/step-ca_amd64.deb -o step-ca.deb
+apt-get install -y ./step-ca.deb
+```
+
+Initialize a CA (the password file can contain any passphrase) and start it:
+
+```
+step ca init --name local-ca --dns localhost --address :9000 \
+  --provisioner admin@example.com --password-file password.txt
+step-ca $(pwd)/config/ca.json &
+export STEP_CA_PID=$!
+```
+
+Trust the root certificate for local HTTPS calls:
+
+```
+export SSL_CERT_FILE=$(pwd)/certs/root_ca.crt
+```
+
+Generate tokens for the tests and export the environment variables that the
+acceptance tests expect:
+
+```
+export STEPCA_TEST_CA_URL=https://localhost:9000
+export STEPCA_TEST_ADMIN_NAME=admin@example.com
+export STEPCA_TEST_ADMIN_KEY=$(pwd)/secrets/provisioner.key
+export STEPCA_TEST_ADMIN_PROVISIONER=admin@example.com
+export STEPCA_TEST_TOKEN=$(step ca token localhost --issuer "$STEPCA_TEST_ADMIN_PROVISIONER" \
+  --key "$STEPCA_TEST_ADMIN_KEY" --password-file password.txt)
+export STEPCA_TEST_ADMIN_TOKEN=$(step ca admin token "$STEPCA_TEST_ADMIN_NAME" \
+  --key "$STEPCA_TEST_ADMIN_KEY" --password-file password.txt)
+```
+
+Run the full suite with:
+
+```
+TF_ACC=1 make test
+```
+
+Stop the CA after the tests finish:
+
+```
+kill $STEP_CA_PID
 ```
 
 ## Releasing

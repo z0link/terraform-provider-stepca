@@ -53,3 +53,4 @@ The following arguments are supported:
 
 * [`stepca_version`](data-sources/version.md) - Retrieve the CA version.
 * [`stepca_ca_certificate`](data-sources/ca_certificate.md) - Fetch the root certificate.
+* [`stepca_provisioners`](data-sources/provisioners.md) - List provisioners via the admin API.

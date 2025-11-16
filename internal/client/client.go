@@ -145,6 +145,28 @@ type Provisioner struct {
 	Admin bool   `json:"admin,omitempty"`
 }
 
+// ListProvisioners retrieves all provisioners available via the admin API.
+func (c *Client) ListProvisioners(ctx context.Context) ([]Provisioner, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, fmt.Sprintf("%s/admin/provisioners", c.baseURL), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+c.adminToken)
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("unexpected status: %s", resp.Status)
+	}
+	var out []Provisioner
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // CreateProvisioner adds a new provisioner using the admin API.
 func (c *Client) CreateProvisioner(ctx context.Context, p Provisioner) error {
 	b, err := json.Marshal(p)

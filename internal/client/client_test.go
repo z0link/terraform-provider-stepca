@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"reflect"
 	"testing"
 )
 
@@ -262,5 +264,50 @@ func TestClientAdmin(t *testing.T) {
 
 	if err := c.DeleteAdmin(context.Background(), "alice", "admin"); err != nil {
 		t.Fatalf("delete failed: %v", err)
+	}
+}
+
+func TestClientListProvisioners(t *testing.T) {
+fixture, err := os.ReadFile("testdata/provisioners.json")
+	if err != nil {
+		t.Fatalf("failed to read fixture: %v", err)
+	}
+	var expected []Provisioner
+	if err := json.Unmarshal(fixture, &expected); err != nil {
+		t.Fatalf("failed to unmarshal fixture: %v", err)
+	}
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		if r.URL.Path != "/admin/provisioners" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.Write(fixture)
+	}))
+	defer srv.Close()
+
+	c := New(srv.URL, "token").WithAdminToken("admin")
+	c.httpClient = srv.Client()
+
+	got, err := c.ListProvisioners(context.Background())
+	if err != nil {
+		t.Fatalf("ListProvisioners returned error: %v", err)
+	}
+	if !reflect.DeepEqual(expected, got) {
+		t.Fatalf("unexpected provisioners: %#v", got)
+	}
+
+	errSrv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer errSrv.Close()
+
+	c = New(errSrv.URL, "token").WithAdminToken("admin")
+	c.httpClient = errSrv.Client()
+	if _, err := c.ListProvisioners(context.Background()); err == nil {
+		t.Fatal("expected error from ListProvisioners")
 	}
 }

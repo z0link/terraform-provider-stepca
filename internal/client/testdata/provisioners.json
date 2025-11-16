@@ -1,0 +1,5 @@
+[
+  {"name": "bootstrap-admin", "type": "JWK", "admin": true},
+  {"name": "acme", "type": "ACME", "admin": false},
+  {"name": "device", "type": "X5C", "admin": false}
+]

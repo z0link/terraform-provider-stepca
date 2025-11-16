@@ -90,7 +90,12 @@ generated using `step ca admin` or `step ca token --issuer <provisioner>` with
 the corresponding admin key. Set `admin = true` to create another admin
 provisioner if desired.
 
-The resulting certificate will be available as the `certificate` attribute.
+The resulting certificate will be available as the `certificate` attribute. The
+resource is create-only: deleting it in Terraform simply forgets the stored
+certificate, and any required revocation must be performed directly in
+step-ca. During refreshes the provider re-fetches the certificate by serial
+number and removes it from state if the CA reports it has been revoked or
+replaced.
 
 ### Data Sources
 

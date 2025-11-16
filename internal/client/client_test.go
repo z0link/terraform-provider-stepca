@@ -51,6 +51,50 @@ func TestClientSign(t *testing.T) {
 	}
 }
 
+func TestClientCertificate(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/certificates/abc", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		w.Write([]byte("PEM"))
+	})
+	mux.HandleFunc("/certificates/missing", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+	mux.HandleFunc("/certificates/error", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusBadGateway)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := New(srv.URL, "token")
+	c.httpClient = srv.Client()
+
+	cert, found, err := c.Certificate(context.Background(), "abc")
+	if err != nil {
+		t.Fatalf("Certificate returned error: %v", err)
+	}
+	if !found {
+		t.Fatalf("expected certificate to be found")
+	}
+	if string(cert) != "PEM" {
+		t.Fatalf("unexpected certificate: %s", cert)
+	}
+
+	_, found, err = c.Certificate(context.Background(), "missing")
+	if err != nil {
+		t.Fatalf("missing certificate returned error: %v", err)
+	}
+	if found {
+		t.Fatalf("expected missing certificate to report not found")
+	}
+
+	if _, _, err := c.Certificate(context.Background(), "error"); err == nil {
+		t.Fatalf("expected error from Certificate")
+	}
+}
+
 func TestClientVersion(t *testing.T) {
 	versionServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {

@@ -13,10 +13,15 @@ import (
 
 var _ resource.Resource = &templateResource{}
 
+// templateGetter captures the helper interface for retrieving templates by name.
+type templateGetter interface {
+	GetTemplate(context.Context, string) (*client.Template, error)
+}
+
 // templateClient captures the subset of the client API this resource needs.
 type templateClient interface {
+	templateGetter
 	CreateTemplate(context.Context, client.Template) error
-	GetTemplate(context.Context, string) (*client.Template, error)
 	UpdateTemplate(context.Context, client.Template) error
 	DeleteTemplate(context.Context, string) error
 }

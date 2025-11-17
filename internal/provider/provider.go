@@ -120,5 +120,6 @@ func (p *stepcaProvider) DataSources(ctx context.Context) []func() datasource.Da
 		NewVersionDataSource,
 		NewCACertificateDataSource,
 		NewProvisionersDataSource,
+    NewTemplateDataSource,
 	}
 }

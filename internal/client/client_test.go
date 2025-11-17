@@ -268,7 +268,7 @@ func TestClientAdmin(t *testing.T) {
 }
 
 func TestClientListProvisioners(t *testing.T) {
-fixture, err := os.ReadFile("testdata/provisioners.json")
+	fixture, err := os.ReadFile("testdata/provisioners.json")
 	if err != nil {
 		t.Fatalf("failed to read fixture: %v", err)
 	}
@@ -309,5 +309,81 @@ fixture, err := os.ReadFile("testdata/provisioners.json")
 	c.httpClient = errSrv.Client()
 	if _, err := c.ListProvisioners(context.Background()); err == nil {
 		t.Fatal("expected error from ListProvisioners")
+	}
+}
+
+func TestClientTemplate(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/admin/templates", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		var tmpl Template
+		if err := json.NewDecoder(r.Body).Decode(&tmpl); err != nil {
+			t.Fatalf("decode error: %v", err)
+		}
+		if tmpl.Name != "example" || tmpl.Body != "BODY" {
+			t.Fatalf("unexpected template: %#v", tmpl)
+		}
+		w.WriteHeader(http.StatusCreated)
+	})
+	mux.HandleFunc("/admin/templates/example", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			_ = json.NewEncoder(w).Encode(Template{Name: "example", Body: "BODY", Metadata: map[string]string{"type": "x509"}})
+		case http.MethodPut:
+			var tmpl Template
+			if err := json.NewDecoder(r.Body).Decode(&tmpl); err != nil {
+				t.Fatalf("decode error: %v", err)
+			}
+			if tmpl.Metadata["version"] != "2" {
+				t.Fatalf("unexpected metadata: %#v", tmpl.Metadata)
+			}
+			w.WriteHeader(http.StatusOK)
+		case http.MethodDelete:
+			w.WriteHeader(http.StatusNoContent)
+		default:
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+	})
+	mux.HandleFunc("/admin/templates/missing", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := New(srv.URL, "ott").WithAdminToken("adm")
+	c.httpClient = srv.Client()
+
+	if err := c.CreateTemplate(context.Background(), Template{Name: "example", Body: "BODY"}); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	tmpl, err := c.GetTemplate(context.Background(), "example")
+	if err != nil {
+		t.Fatalf("get failed: %v", err)
+	}
+	if tmpl == nil || tmpl.Name != "example" || tmpl.Metadata["type"] != "x509" {
+		t.Fatalf("unexpected template: %#v", tmpl)
+	}
+
+	if err := c.UpdateTemplate(context.Background(), Template{Name: "example", Body: "BODY", Metadata: map[string]string{"version": "2"}}); err != nil {
+		t.Fatalf("update failed: %v", err)
+	}
+
+	if err := c.DeleteTemplate(context.Background(), "example"); err != nil {
+		t.Fatalf("delete failed: %v", err)
+	}
+
+	missing, err := c.GetTemplate(context.Background(), "missing")
+	if err != nil {
+		t.Fatalf("missing get failed: %v", err)
+	}
+	if missing != nil {
+		t.Fatalf("expected nil template, got %#v", missing)
+	}
+
+	if err := c.DeleteTemplate(context.Background(), "missing"); err != nil {
+		t.Fatalf("delete missing failed: %v", err)
 	}
 }

@@ -74,11 +74,12 @@ func (p *stepcaProvider) Configure(ctx context.Context, req provider.ConfigureRe
 }
 
 func (p *stepcaProvider) Resources(ctx context.Context) []func() resource.Resource {
-	return []func() resource.Resource{
-		NewCertificateResource,
-		NewProvisionerResource,
-		NewAdminResource,
-	}
+        return []func() resource.Resource{
+                NewCertificateResource,
+                NewProvisionerResource,
+                NewAdminResource,
+                NewTemplateResource,
+        }
 }
 
 func (p *stepcaProvider) DataSources(ctx context.Context) []func() datasource.DataSource {

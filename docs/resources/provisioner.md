@@ -10,6 +10,14 @@ resource "stepca_provisioner" "admin" {
   type  = "JWK"
   admin = true
 }
+
+resource "stepca_provisioner" "leaf" {
+  name           = "leaf-issuer"
+  type           = "JWK"
+  x509_template  = "leaf"
+  ssh_template   = "ssh-user"
+  admin          = false
+}
 ```
 
 The CA created by `step ca init` includes a default JWK admin provisioner. To
@@ -26,6 +34,9 @@ Provisioners marked as `admin = true` can create additional admins with the
 * `name` - (Required) Name of the provisioner.
 * `type` - (Required) Provisioner type, e.g. `JWK`, `OIDC`, `ACME`, `X5C`.
 * `admin` - (Optional) Set to `true` to create an admin provisioner.
+* `x509_template` - (Optional) Name of an X.509 template to bind to the provisioner (maps to step-ca's `x509Template`).
+* `ssh_template` - (Optional) Name of an SSH template to bind to the provisioner (maps to step-ca's `sshTemplate`).
+* `attestation_template` - (Optional) Name of an attestation template to bind to the provisioner (maps to step-ca's `attestationTemplate`).
 
 ## Attributes Reference
 

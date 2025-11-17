@@ -10,9 +10,12 @@ import (
 
 // Provisioner represents a simple provisioner configuration.
 type Provisioner struct {
-	Name  string `json:"name"`
-	Type  string `json:"type"`
-	Admin bool   `json:"admin,omitempty"`
+	Name                string `json:"name"`
+	Type                string `json:"type"`
+	Admin               bool   `json:"admin,omitempty"`
+	X509Template        string `json:"x509Template,omitempty"`
+	SSHTemplate         string `json:"sshTemplate,omitempty"`
+	AttestationTemplate string `json:"attestationTemplate,omitempty"`
 }
 
 // ListProvisioners retrieves all provisioners available via the admin API.

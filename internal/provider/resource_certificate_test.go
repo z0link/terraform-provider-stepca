@@ -18,15 +18,27 @@ import (
 )
 
 type fakeCertificateClient struct {
-	t      *testing.T
-	serial string
-	pem    string
-	found  bool
-	err    error
+	t         *testing.T
+	serial    string
+	pem       string
+	found     bool
+	err       error
+	signPEM   string
+	signErr   error
+	signCSR   string
+	signCalls int
 }
 
 func (f *fakeCertificateClient) Sign(ctx context.Context, csr string) ([]byte, error) {
-	return nil, fmt.Errorf("not implemented")
+	f.signCalls++
+	f.signCSR = csr
+	if f.signErr != nil {
+		return nil, f.signErr
+	}
+	if f.signPEM == "" {
+		return nil, fmt.Errorf("sign response not configured")
+	}
+	return []byte(f.signPEM), nil
 }
 
 func (f *fakeCertificateClient) Certificate(ctx context.Context, serial string) ([]byte, bool, error) {
@@ -136,6 +148,121 @@ func TestCertificateResourceShouldKeepCertificate(t *testing.T) {
 			}
 			if warnCount != tc.wantWarnCount {
 				t.Fatalf("expected %d warnings got %d", tc.wantWarnCount, warnCount)
+			}
+		})
+	}
+}
+
+func TestCertificateResourceApplyCertificateUpdate(t *testing.T) {
+	t.Parallel()
+
+	ctx := context.Background()
+
+	existingCert := types.StringValue("state-cert")
+
+	tests := []struct {
+		name          string
+		plan          certificateResourceModel
+		state         certificateResourceModel
+		client        *fakeCertificateClient
+		wantCert      string
+		wantNullCert  bool
+		wantSignCalls int
+		wantErr       bool
+	}{
+		{
+			name: "no change reuses state certificate",
+			plan: certificateResourceModel{
+				CSR: types.StringValue("csr"),
+			},
+			state: certificateResourceModel{
+				CSR:  types.StringValue("csr"),
+				Cert: existingCert,
+			},
+			client:        &fakeCertificateClient{},
+			wantCert:      existingCert.ValueString(),
+			wantSignCalls: 0,
+		},
+		{
+			name: "csr change reissues certificate",
+			plan: certificateResourceModel{CSR: types.StringValue("new-csr")},
+			state: certificateResourceModel{
+				CSR:  types.StringValue("old-csr"),
+				Cert: existingCert,
+			},
+			client:        &fakeCertificateClient{signPEM: "new-cert"},
+			wantCert:      "new-cert",
+			wantSignCalls: 1,
+		},
+		{
+			name: "force rotate enabled reissues",
+			plan: certificateResourceModel{
+				CSR:         types.StringValue("csr"),
+				ForceRotate: types.BoolValue(true),
+			},
+			state: certificateResourceModel{
+				CSR:         types.StringValue("csr"),
+				ForceRotate: types.BoolValue(false),
+				Cert:        existingCert,
+			},
+			client:        &fakeCertificateClient{signPEM: "force-cert"},
+			wantCert:      "force-cert",
+			wantSignCalls: 1,
+		},
+		{
+			name: "force rotate disabled reissues",
+			plan: certificateResourceModel{
+				CSR:         types.StringValue("csr"),
+				ForceRotate: types.BoolValue(false),
+			},
+			state: certificateResourceModel{
+				CSR:         types.StringValue("csr"),
+				ForceRotate: types.BoolValue(true),
+				Cert:        existingCert,
+			},
+			client:        &fakeCertificateClient{signPEM: "force-disabled"},
+			wantCert:      "force-disabled",
+			wantSignCalls: 1,
+		},
+		{
+			name: "sign failure reports diagnostics",
+			plan: certificateResourceModel{
+				CSR:         types.StringValue("csr"),
+				ForceRotate: types.BoolValue(true),
+			},
+			state: certificateResourceModel{
+				CSR:  types.StringValue("csr"),
+				Cert: existingCert,
+			},
+			client:        &fakeCertificateClient{signErr: fmt.Errorf("boom")},
+			wantNullCert:  true,
+			wantSignCalls: 1,
+			wantErr:       true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			resource := &certificateResource{client: tc.client}
+			updated, diags := resource.applyCertificateUpdate(ctx, tc.plan, tc.state)
+			if tc.wantErr {
+				if !diags.HasError() {
+					t.Fatalf("expected diagnostics error")
+				}
+			} else if diags.HasError() {
+				t.Fatalf("unexpected diagnostics error: %v", diags)
+			}
+			if tc.client != nil && tc.client.signCalls != tc.wantSignCalls {
+				t.Fatalf("expected %d sign calls got %d", tc.wantSignCalls, tc.client.signCalls)
+			}
+			if tc.wantNullCert {
+				if !updated.Cert.IsNull() {
+					t.Fatalf("expected certificate to be null")
+				}
+				return
+			}
+			if updated.Cert.ValueString() != tc.wantCert {
+				t.Fatalf("expected certificate %q got %q", tc.wantCert, updated.Cert.ValueString())
 			}
 		})
 	}

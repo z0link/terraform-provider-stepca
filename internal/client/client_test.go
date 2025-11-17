@@ -187,6 +187,16 @@ func TestClientProvisioner(t *testing.T) {
 		switch r.Method {
 		case http.MethodGet:
 			_ = json.NewEncoder(w).Encode(Provisioner{Name: "test", Type: "JWK", Admin: true})
+		case http.MethodPut:
+			var p Provisioner
+			if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+				t.Fatalf("decode error: %v", err)
+			}
+			if !p.Admin {
+				w.WriteHeader(http.StatusOK)
+				return
+			}
+			t.Fatalf("unexpected payload during update: %#v", p)
 		case http.MethodDelete:
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -209,6 +219,10 @@ func TestClientProvisioner(t *testing.T) {
 	}
 	if p == nil || p.Name != "test" || p.Type != "JWK" || !p.Admin {
 		t.Fatalf("unexpected provisioner %#v", p)
+	}
+
+	if err := c.ReplaceProvisioner(context.Background(), "test", Provisioner{Name: "test", Type: "JWK", Admin: false}); err != nil {
+		t.Fatalf("replace failed: %v", err)
 	}
 
 	if err := c.DeleteProvisioner(context.Background(), "test"); err != nil {
@@ -238,6 +252,15 @@ func TestClientAdmin(t *testing.T) {
 		switch r.Method {
 		case http.MethodGet:
 			_ = json.NewEncoder(w).Encode(Admin{Name: "alice", Provisioner: "admin"})
+		case http.MethodPut:
+			var a Admin
+			if err := json.NewDecoder(r.Body).Decode(&a); err != nil {
+				t.Fatalf("decode error: %v", err)
+			}
+			if a.Provisioner != "operators" {
+				t.Fatalf("unexpected admin payload: %#v", a)
+			}
+			w.WriteHeader(http.StatusOK)
 		case http.MethodDelete:
 			w.WriteHeader(http.StatusNoContent)
 		default:
@@ -260,6 +283,10 @@ func TestClientAdmin(t *testing.T) {
 	}
 	if a == nil || a.Name != "alice" || a.Provisioner != "admin" {
 		t.Fatalf("unexpected admin %#v", a)
+	}
+
+	if err := c.ReplaceAdmin(context.Background(), "alice", "admin", Admin{Name: "alice", Provisioner: "operators"}); err != nil {
+		t.Fatalf("replace failed: %v", err)
 	}
 
 	if err := c.DeleteAdmin(context.Background(), "alice", "admin"); err != nil {

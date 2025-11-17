@@ -4,6 +4,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/google/go-cmp/cmp"
+	pfresource "github.com/hashicorp/terraform-plugin-framework/resource"
+	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/types"
 
 	"github.com/z0link/terraform-provider-stepca/internal/client"
@@ -31,6 +34,26 @@ func (f *fakeProvisionerClient) GetProvisioner(ctx context.Context, name string)
 	return f.getResp, nil
 }
 
+func TestProvisionerResourceSchema(t *testing.T) {
+	t.Parallel()
+	resource := NewProvisionerResource()
+	var resp pfresource.SchemaResponse
+	resource.Schema(context.Background(), pfresource.SchemaRequest{}, &resp)
+	expected := schema.Schema{
+		Attributes: map[string]schema.Attribute{
+			"name":                 schema.StringAttribute{Required: true},
+			"type":                 schema.StringAttribute{Required: true},
+			"admin":                schema.BoolAttribute{Optional: true},
+			"x509_template":        schema.StringAttribute{Optional: true},
+			"ssh_template":         schema.StringAttribute{Optional: true},
+			"attestation_template": schema.StringAttribute{Optional: true},
+		},
+	}
+	if diff := cmp.Diff(expected, resp.Schema); diff != "" {
+		t.Fatalf("unexpected schema: (-want +got)\n%s", diff)
+	}
+}
+
 func TestProvisionerResourceUpdateAdminToggle(t *testing.T) {
 	t.Parallel()
 	fake := &fakeProvisionerClient{getResp: &client.Provisioner{Name: "api", Type: "JWK", Admin: true}}
@@ -49,6 +72,37 @@ func TestProvisionerResourceUpdateAdminToggle(t *testing.T) {
 	}
 	if fake.replaceInput.Admin != true {
 		t.Fatalf("unexpected replace payload: %#v", fake.replaceInput)
+	}
+}
+
+func TestProvisionerResourceUpdateTemplateChange(t *testing.T) {
+	t.Parallel()
+	fake := &fakeProvisionerClient{getResp: &client.Provisioner{Name: "api", Type: "JWK", X509Template: "leaf"}}
+	r := &provisionerResource{client: fake}
+	plan := provisionerResourceModel{
+		Name:         types.StringValue("api"),
+		Type:         types.StringValue("JWK"),
+		X509Template: types.StringValue("leaf"),
+		SSHTemplate:  types.StringValue("ssh-user"),
+	}
+	state := provisionerResourceModel{
+		Name:         types.StringValue("api"),
+		Type:         types.StringValue("JWK"),
+		X509Template: types.StringNull(),
+		SSHTemplate:  types.StringNull(),
+	}
+	updated, diags := r.updateProvisioner(context.Background(), &state, &plan)
+	if diags.HasError() {
+		t.Fatalf("unexpected diagnostics: %#v", diags)
+	}
+	if !fake.replaceCalled {
+		t.Fatalf("expected replace call")
+	}
+	if fake.replaceInput.X509Template != "leaf" || fake.replaceInput.SSHTemplate != "ssh-user" {
+		t.Fatalf("unexpected template payload: %#v", fake.replaceInput)
+	}
+	if updated == nil || updated.X509Template.IsNull() {
+		t.Fatalf("expected updated model to include template: %#v", updated)
 	}
 }
 

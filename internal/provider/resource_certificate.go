@@ -32,8 +32,9 @@ type certificateResource struct {
 }
 
 type certificateResourceModel struct {
-	CSR  types.String `tfsdk:"csr"`
-	Cert types.String `tfsdk:"certificate"`
+	CSR         types.String `tfsdk:"csr"`
+	Cert        types.String `tfsdk:"certificate"`
+	ForceRotate types.Bool   `tfsdk:"force_rotate"`
 }
 
 func (r *certificateResource) Metadata(ctx context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -45,6 +46,10 @@ func (r *certificateResource) Schema(ctx context.Context, req resource.SchemaReq
 		Attributes: map[string]schema.Attribute{
 			"csr":         schema.StringAttribute{Required: true},
 			"certificate": schema.StringAttribute{Computed: true},
+			"force_rotate": schema.BoolAttribute{
+				Optional:    true,
+				Description: "Toggle this value to force Terraform to request a new certificate without changing the CSR.",
+			},
 		},
 	}
 }
@@ -104,6 +109,27 @@ func (r *certificateResource) Read(ctx context.Context, req resource.ReadRequest
 }
 
 func (r *certificateResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
+	var state certificateResourceModel
+	var plan certificateResourceModel
+	diags := req.State.Get(ctx, &state)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+	diags = req.Plan.Get(ctx, &plan)
+	resp.Diagnostics.Append(diags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	updated, updateDiags := r.applyCertificateUpdate(ctx, plan, state)
+	resp.Diagnostics.Append(updateDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
+	diags = resp.State.Set(ctx, &updated)
+	resp.Diagnostics.Append(diags...)
 }
 
 func (r *certificateResource) Delete(ctx context.Context, req resource.DeleteRequest, resp *resource.DeleteResponse) {
@@ -164,6 +190,43 @@ func (r *certificateResource) shouldKeepCertificate(ctx context.Context, data *c
 	}
 
 	return true, diags
+}
+
+func (r *certificateResource) applyCertificateUpdate(ctx context.Context, plan, state certificateResourceModel) (certificateResourceModel, diag.Diagnostics) {
+	var diags diag.Diagnostics
+
+	if !needsCertificateRotation(plan, state) {
+		plan.Cert = state.Cert
+		return plan, diags
+	}
+
+	if r.client == nil {
+		diags = append(diags, diag.NewErrorDiagnostic("provider not configured", "missing client"))
+		return plan, diags
+	}
+
+	certPEM, err := r.client.Sign(ctx, plan.CSR.ValueString())
+	if err != nil {
+		diags = append(diags, diag.NewErrorDiagnostic("sign failed", err.Error()))
+		return plan, diags
+	}
+
+	plan.Cert = types.StringValue(string(certPEM))
+	return plan, diags
+}
+
+func needsCertificateRotation(plan, state certificateResourceModel) bool {
+	if plan.CSR.ValueString() != state.CSR.ValueString() {
+		return true
+	}
+	return boolValue(plan.ForceRotate) != boolValue(state.ForceRotate)
+}
+
+func boolValue(v types.Bool) bool {
+	if v.IsNull() || v.IsUnknown() {
+		return false
+	}
+	return v.ValueBool()
 }
 
 func parseCertificate(pemData string) (*x509.Certificate, error) {

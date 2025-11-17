@@ -230,6 +230,69 @@ func TestClientProvisioner(t *testing.T) {
 	}
 }
 
+func TestClientProvisionerTemplates(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/admin/provisioners", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+		var p Provisioner
+		if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+			t.Fatalf("decode error: %v", err)
+		}
+		if p.X509Template != "leaf" || p.SSHTemplate != "ssh-user" {
+			t.Fatalf("unexpected template payload: %#v", p)
+		}
+		w.WriteHeader(http.StatusCreated)
+	})
+	mux.HandleFunc("/admin/provisioners/custom", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			_ = json.NewEncoder(w).Encode(Provisioner{
+				Name:                "custom",
+				Type:                "JWK",
+				X509Template:        "leaf",
+				SSHTemplate:         "ssh-user",
+				AttestationTemplate: "hsm-attestation",
+			})
+		case http.MethodPut:
+			var p Provisioner
+			if err := json.NewDecoder(r.Body).Decode(&p); err != nil {
+				t.Fatalf("decode error: %v", err)
+			}
+			if p.AttestationTemplate != "hsm-attestation" {
+				t.Fatalf("unexpected attestation template: %#v", p.AttestationTemplate)
+			}
+			w.WriteHeader(http.StatusOK)
+		default:
+			t.Fatalf("unexpected method: %s", r.Method)
+		}
+	})
+	srv := httptest.NewServer(mux)
+	defer srv.Close()
+
+	c := New(srv.URL, "ott").WithAdminToken("adm")
+	c.httpClient = srv.Client()
+
+	createPayload := Provisioner{Name: "custom", Type: "JWK", X509Template: "leaf", SSHTemplate: "ssh-user"}
+	if err := c.CreateProvisioner(context.Background(), createPayload); err != nil {
+		t.Fatalf("create failed: %v", err)
+	}
+
+	replacePayload := Provisioner{Name: "custom", Type: "JWK", AttestationTemplate: "hsm-attestation"}
+	if err := c.ReplaceProvisioner(context.Background(), "custom", replacePayload); err != nil {
+		t.Fatalf("replace failed: %v", err)
+	}
+
+	got, err := c.GetProvisioner(context.Background(), "custom")
+	if err != nil {
+		t.Fatalf("get failed: %v", err)
+	}
+	if got == nil || got.X509Template != "leaf" || got.SSHTemplate != "ssh-user" || got.AttestationTemplate != "hsm-attestation" {
+		t.Fatalf("unexpected provisioner: %#v", got)
+	}
+}
+
 func TestClientAdmin(t *testing.T) {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/admin/admins", func(w http.ResponseWriter, r *http.Request) {

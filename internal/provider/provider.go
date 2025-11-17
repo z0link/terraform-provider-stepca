@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/hashicorp/terraform-plugin-framework/datasource"
+	"github.com/hashicorp/terraform-plugin-framework/diag"
 	"github.com/hashicorp/terraform-plugin-framework/provider"
 	"github.com/hashicorp/terraform-plugin-framework/provider/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
@@ -41,8 +42,8 @@ func (p *stepcaProvider) Schema(ctx context.Context, req provider.SchemaRequest,
 	resp.Schema = schema.Schema{
 		Attributes: map[string]schema.Attribute{
 			"ca_url":            schema.StringAttribute{Required: true},
-			"admin_name":        schema.StringAttribute{Required: true},
-			"admin_key":         schema.StringAttribute{Required: true},
+			"admin_name":        schema.StringAttribute{Optional: true},
+			"admin_key":         schema.StringAttribute{Optional: true},
 			"admin_provisioner": schema.StringAttribute{Optional: true},
 			"token":             schema.StringAttribute{Required: true, Sensitive: true},
 			// Token for admin API calls. Generate with the admin key if
@@ -60,33 +61,65 @@ func (p *stepcaProvider) Configure(ctx context.Context, req provider.ConfigureRe
 		return
 	}
 
+	credDiags := validateAdminCredentials(&data)
+	resp.Diagnostics.Append(credDiags...)
+	if resp.Diagnostics.HasError() {
+		return
+	}
+
 	c := client.New(data.CAURL.ValueString(), data.Token.ValueString())
-	c = c.WithAdminName(data.AdminName.ValueString())
-	c = c.WithAdminKey(data.AdminKey.ValueString())
-	if !data.AdminProvisioner.IsNull() {
+	if !data.AdminName.IsNull() && !data.AdminName.IsUnknown() {
+		c = c.WithAdminName(data.AdminName.ValueString())
+	}
+	if !data.AdminKey.IsNull() && !data.AdminKey.IsUnknown() {
+		c = c.WithAdminKey(data.AdminKey.ValueString())
+	}
+	if !data.AdminProvisioner.IsNull() && !data.AdminProvisioner.IsUnknown() {
 		c = c.WithAdminProvisioner(data.AdminProvisioner.ValueString())
 	}
-	if !data.AdminToken.IsNull() {
+	if !data.AdminToken.IsNull() && !data.AdminToken.IsUnknown() {
 		c = c.WithAdminToken(data.AdminToken.ValueString())
 	}
 	resp.DataSourceData = c
 	resp.ResourceData = c
 }
 
+func validateAdminCredentials(data *stepcaProviderModel) diag.Diagnostics {
+	var diags diag.Diagnostics
+	adminNameSet := !data.AdminName.IsNull() && !data.AdminName.IsUnknown()
+	adminKeySet := !data.AdminKey.IsNull() && !data.AdminKey.IsUnknown()
+	adminTokenSet := !data.AdminToken.IsNull() && !data.AdminToken.IsUnknown()
+
+	if adminNameSet != adminKeySet {
+		diags.AddError(
+			"incomplete admin key configuration",
+			"admin_name and admin_key must be set together when not supplying admin_token",
+		)
+		return diags
+	}
+	if !adminTokenSet && !(adminNameSet && adminKeySet) {
+		diags.AddError(
+			"missing admin credentials",
+			"configure either admin_token for admin API access or both admin_name and admin_key so the provider can mint one",
+		)
+	}
+	return diags
+}
+
 func (p *stepcaProvider) Resources(ctx context.Context) []func() resource.Resource {
-        return []func() resource.Resource{
-                NewCertificateResource,
-                NewProvisionerResource,
-                NewAdminResource,
-                NewTemplateResource,
-        }
+	return []func() resource.Resource{
+		NewCertificateResource,
+		NewProvisionerResource,
+		NewAdminResource,
+		NewTemplateResource,
+	}
 }
 
 func (p *stepcaProvider) DataSources(ctx context.Context) []func() datasource.DataSource {
-        return []func() datasource.DataSource{
-                NewVersionDataSource,
-                NewCACertificateDataSource,
-                NewProvisionersDataSource,
-                NewTemplateDataSource,
-        }
+	return []func() datasource.DataSource{
+		NewVersionDataSource,
+		NewCACertificateDataSource,
+		NewProvisionersDataSource,
+    NewTemplateDataSource,
+	}
 }

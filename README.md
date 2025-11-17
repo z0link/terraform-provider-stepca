@@ -53,13 +53,12 @@ PUBLISH_TO_TERRAFORM_REGISTRY=true make release VERSION=v0.1.0
 provider "stepca" {
   ca_url = "https://ca.example.com"
   token  = "<one-time-token>"
-  admin_name = "admin@example.com"
-  admin_key  = "/path/to/admin.key"
   admin_provisioner = "admin"
-  # Supply a token generated for the admin API. When using a JWK admin
-  # provisioner you can create this token with your `admin_key` using
-  # `step ca admin` or `step ca token --issuer <admin_provisioner>`.
-  admin_token = "<admin-token>"
+
+  # Provide EITHER a pre-generated admin token OR the admin key pair.
+  # admin_token = "<admin-token>"
+  # admin_name  = "admin@example.com"
+  # admin_key   = "/path/to/admin.key"
 }
 
 resource "stepca_certificate" "example" {
@@ -80,12 +79,28 @@ resource "stepca_admin" "alice" {
 }
 ```
 
+### Admin Credentials
+
+Resources that interact with the admin API (admins, provisioners, templates)
+require a bearer token. The provider now accepts either of the following
+credential sets and will emit a validation error when neither is supplied:
+
+- `admin_token`: Use when you already generated an admin token via `step ca
+  admin` or `step ca token --issuer <admin_provisioner>` and just need Terraform
+  to reuse it.
+- `admin_name` **and** `admin_key`: Use when Terraform should be able to create
+  tokens on demand using the referenced admin's key material.
+
+Provide only one set or both, depending on how you source credentials for your
+workflow, but never just one half of the key pair.
+
 ### Step CA Initialization
 
 After running `step ca init` a single JWK provisioner with admin privileges is
 created. Additional provisioners can be managed via the `stepca_provisioner`
 resource. Use the provider's optional `admin_token` argument with a token issued
-for an existing admin provisioner when creating new ones. Tokens can be
+for an existing admin provisioner when creating new ones, or provide
+`admin_name`/`admin_key` so the provider can mint its own tokens. Tokens can be
 generated using `step ca admin` or `step ca token --issuer <provisioner>` with
 the corresponding admin key. Set `admin = true` to create another admin
 provisioner if desired.
